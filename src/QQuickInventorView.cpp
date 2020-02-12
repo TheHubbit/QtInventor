@@ -26,9 +26,9 @@
 QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferObject(parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
-    frameBufferObject = 0;
+    m_frameBufferObject = 0;
 
-    sceneManager.setRenderCallback(renderCBFunc, this);
+    m_sceneManager.setRenderCallback(renderCBFunc, this);
 
     QFile file(":/ExampleScene.iv");
     if (file.open(QFile::ReadOnly))
@@ -37,8 +37,8 @@ QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferOb
 
         SoInput in;
         in.setBuffer(sceneBuffer.data(), size_t(sceneBuffer.size()));
-        sceneManager.setSceneGraph(SoDB::readAll(&in));
-        sceneManager.scheduleRedraw();
+        m_sceneManager.setSceneGraph(SoDB::readAll(&in));
+        m_sceneManager.scheduleRedraw();
     }
 
     connect(this, SIGNAL(widthChanged()), this, SLOT(onResize()));
@@ -48,10 +48,10 @@ QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferOb
 void QQuickInventorView::onResize()
 {
     const SbVec2s sizeVec2s(short(size().width()), short(size().height()));
-    if (sceneManager.getSize() != sizeVec2s)
+    if (m_sceneManager.getSize() != sizeVec2s)
     {
-        sceneManager.setWindowSize(sizeVec2s);
-        sceneManager.setSize(sizeVec2s);
+        m_sceneManager.setWindowSize(sizeVec2s);
+        m_sceneManager.setSize(sizeVec2s);
         renderIvScene();
     }
 }
@@ -63,12 +63,12 @@ QQuickFramebufferObject::Renderer *QQuickInventorView::createRenderer() const
 
 QOpenGLFramebufferObject *QQuickInventorView::fbo() const
 {
-    return frameBufferObject;
+    return m_frameBufferObject;
 }
 
 QReadWriteLock *QQuickInventorView::fboLock()
 {
-    return &frameBufferObjectLock;
+    return &m_frameBufferObjectLock;
 }
 
 void QQuickInventorView::renderCBFunc(void *userdata, SoSceneManager *)
@@ -79,24 +79,24 @@ void QQuickInventorView::renderCBFunc(void *userdata, SoSceneManager *)
 
 void QQuickInventorView::createAndBindFramebufferObject(const QSize &size)
 {
-    if (frameBufferObject)
+    if (m_frameBufferObject)
     {
-        if (frameBufferObject->size() == size)
+        if (m_frameBufferObject->size() == size)
         {
             // Keep using already created framebuffer. Just bind it.
-            frameBufferObject->bind();
+            m_frameBufferObject->bind();
             return;
         }
 
-        delete frameBufferObject;
+        delete m_frameBufferObject;
     }
 
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
     format.setSamples(4);
 
-    frameBufferObject = new QOpenGLFramebufferObject(size, format);
-    frameBufferObject->bind();
+    m_frameBufferObject = new QOpenGLFramebufferObject(size, format);
+    m_frameBufferObject->bind();
 
     // initializeOpenGLFunctions() checks if already initialized.
     initializeOpenGLFunctions();
@@ -111,14 +111,14 @@ void QQuickInventorView::renderIvScene()
         QVariant v = window()->property(OpenGLContextProperty);
         if (QOpenGLContext *context = v.value<QOpenGLContext*>())
         {
-            QWriteLocker locker(&frameBufferObjectLock);
-
-            context->makeCurrent(window());
-
-            createAndBindFramebufferObject(QSize(sceneManager.getSize()[0], sceneManager.getSize()[1]));
-            sceneManager.render();
-            frameBufferObject->release();
-            context->doneCurrent();
+            if (context->makeCurrent(window()))
+            {
+                QWriteLocker locker(&m_frameBufferObjectLock);
+                createAndBindFramebufferObject(QSize(m_sceneManager.getSize()[0], m_sceneManager.getSize()[1]));
+                m_sceneManager.render();
+                m_frameBufferObject->release();
+                context->doneCurrent();
+            }
 
             // Trigger display update
             update();
@@ -134,7 +134,7 @@ void QQuickInventorView::mousePressEvent(QMouseEvent *event)
     buttonEvent.setPosition(SbVec2s(short(event->x()), short(event->y())));
     buttonEvent.setButton(button);
     buttonEvent.setState(SoMouseButtonEvent::DOWN);
-    sceneManager.processEvent(&buttonEvent);
+    m_sceneManager.processEvent(&buttonEvent);
 }
 
 void QQuickInventorView::mouseReleaseEvent(QMouseEvent *event)
@@ -145,7 +145,7 @@ void QQuickInventorView::mouseReleaseEvent(QMouseEvent *event)
     buttonEvent.setPosition(SbVec2s(short(event->x()), short(event->y())));
     buttonEvent.setButton(button);
     buttonEvent.setState(SoMouseButtonEvent::UP);
-    sceneManager.processEvent(&buttonEvent);
+    m_sceneManager.processEvent(&buttonEvent);
 }
 
 void QQuickInventorView::mouseMoveEvent(QMouseEvent *event)
@@ -153,12 +153,50 @@ void QQuickInventorView::mouseMoveEvent(QMouseEvent *event)
     SoLocation2Event moveEvent;
     moveEvent.setTime(SbTime::getTimeOfDay());
     moveEvent.setPosition(SbVec2s(short(event->x()), short(event->y())));
-    sceneManager.processEvent(&moveEvent);
+    m_sceneManager.processEvent(&moveEvent);
 }
+
+void QQuickInventorView::setScene(const QString &str)
+{
+    m_sceneString = str;
+
+    QByteArray sceneBuffer;
+    if (str.left(1) == "#")
+    {
+        // Buffer
+        sceneBuffer = str.toUtf8();
+    }
+    else
+    {
+        // File
+        QFile file(str);//":/ExampleScene.iv");
+        if (file.open(QFile::ReadOnly))
+        {
+            QByteArray sceneBuffer = file.readAll();
+        }
+    }
+
+    SoInput in;
+    in.setBuffer(sceneBuffer.data(), size_t(sceneBuffer.size()));
+    if (in.isValidBuffer())
+    {
+        SoSeparator *root = SoDB::readAll(&in);
+        m_sceneManager.setSceneGraph(root);
+        m_sceneManager.scheduleRedraw();
+
+        emit sceneChanged();
+    }
+}
+
+QString QQuickInventorView::scene() const
+{
+    return m_sceneString;
+}
+
 
 QQuickInventorView::InventorRenderer::InventorRenderer()
 {
-    syncFramebufferObject = 0;
+    m_syncFramebufferObject = 0;
 }
 
 void QQuickInventorView::InventorRenderer::render()
@@ -175,8 +213,8 @@ void QQuickInventorView::InventorRenderer::synchronize(QQuickFramebufferObject *
         copyFramebufferContent(view->fbo(), framebufferObject());
 
         // Remember source so createFramebufferObject() can copy again in case of resize.
-        syncFramebufferObject = view->fbo();
-        syncFramebufferObjectLock = view->fboLock();
+        m_syncFramebufferObject = view->fbo();
+        m_syncFramebufferObjectLock = view->fboLock();
     }
 }
 
@@ -188,10 +226,10 @@ QOpenGLFramebufferObject *QQuickInventorView::InventorRenderer::createFramebuffe
     QOpenGLFramebufferObject *fbo = new QOpenGLFramebufferObject(size, format);
 
     // Copy last content into newly created frmaebuffer (typically after resizing).
-    if (syncFramebufferObjectLock && syncFramebufferObject)
+    if (m_syncFramebufferObjectLock && m_syncFramebufferObject)
     {
-        QReadLocker locker(syncFramebufferObjectLock);
-        copyFramebufferContent(syncFramebufferObject, fbo);
+        QReadLocker locker(m_syncFramebufferObjectLock);
+        copyFramebufferContent(m_syncFramebufferObject, fbo);
     }
 
     return fbo;

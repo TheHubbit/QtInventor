@@ -23,6 +23,7 @@
 class QQuickInventorView : public QQuickFramebufferObject, protected QOpenGLFunctions
 {
     Q_OBJECT
+    Q_PROPERTY(QString scene READ scene WRITE setScene USER true)
 
 public:
     static constexpr const char* OpenGLContextProperty = "InventorOpenGLContext";
@@ -31,6 +32,12 @@ public:
     Renderer *createRenderer() const override;
     QOpenGLFramebufferObject *fbo() const;
     QReadWriteLock *fboLock();
+
+    void setScene(const QString &str);
+    QString scene() const;
+
+signals:
+    void sceneChanged();
 
 protected slots:
     void onResize();
@@ -44,9 +51,10 @@ protected:
     virtual void renderIvScene();
     virtual void createAndBindFramebufferObject(const QSize &size);
 
-    QOpenGLFramebufferObject *frameBufferObject;
-    SoSceneManager sceneManager;
-    QReadWriteLock frameBufferObjectLock;
+    QOpenGLFramebufferObject *m_frameBufferObject;
+    SoSceneManager m_sceneManager;
+    QReadWriteLock m_frameBufferObjectLock;
+    QString m_sceneString;
 
     class InventorRenderer : public QQuickFramebufferObject::Renderer
     {
@@ -60,8 +68,8 @@ protected:
 
     protected:
         virtual void copyFramebufferContent(QOpenGLFramebufferObject *source, QOpenGLFramebufferObject *target);
-        QOpenGLFramebufferObject *syncFramebufferObject;
-        QReadWriteLock *syncFramebufferObjectLock;
+        QOpenGLFramebufferObject *m_syncFramebufferObject;
+        QReadWriteLock *m_syncFramebufferObjectLock;
     };
 };
 
