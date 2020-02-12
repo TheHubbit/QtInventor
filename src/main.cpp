@@ -12,7 +12,7 @@
 #include <QGuiApplication>
 #include <QtQuick/QQuickView>
 #include "QInventorContext.h"
-#include "QQuickInventor.h"
+#include "QQuickInventorView.h"
 
 
 int main(int argc, char **argv)

@@ -12,7 +12,7 @@
 
 #include <QTimer>
 #include "QInventorContext.h"
-#include "QQuickInventor.h"
+#include "QQuickInventorView.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
 
@@ -23,8 +23,8 @@ bool QInventorContext::isShared = false;
 
 void QInventorContext::init()
 {
-    // Register QML type for viewing Coin scenes.
-    qmlRegisterType<QQuickInventor>("QtInventor", 1, 0, "InventorRenderer");
+    // Register QML type for viewing Inventor scenes.
+    qmlRegisterType<QQuickInventorView>("QtInventor", 1, 0, "InventorRenderer");
 
     // Initialize scene object database.
     SoDB::init();
@@ -49,7 +49,7 @@ QInventorContext::QInventorContext(QQuickView *window)
 
     // Add shared OpenGL context property to window. This is used by QQuickCoinView to render Inventor scenes.
     QVariant v = qVariantFromValue(theSharedOpenGLContext);
-    quickView->setProperty(QQuickInventor::OpenGLContextProperty, v);
+    m_quickView->setProperty(QQuickInventorView::OpenGLContextProperty, v);
 
     // Share OpenGL resources once Quick SG is initialized.
     // Use direct connection to ensure that we are called from QSGRenderThread (required for making context current).

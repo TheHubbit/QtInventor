@@ -20,14 +20,14 @@
 #include <Inventor/SoSceneManager.h>
 
 
-class QQuickInventor : public QQuickFramebufferObject, protected QOpenGLFunctions
+class QQuickInventorView : public QQuickFramebufferObject, protected QOpenGLFunctions
 {
     Q_OBJECT
 
 public:
     static constexpr const char* OpenGLContextProperty = "InventorOpenGLContext";
 
-    QQuickInventor(QQuickItem *parent = 0);
+    QQuickInventorView(QQuickItem *parent = 0);
     Renderer *createRenderer() const override;
     QOpenGLFramebufferObject *fbo() const;
     QReadWriteLock *fboLock();

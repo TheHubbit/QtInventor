@@ -4,10 +4,10 @@ CONFIG += c++11
 
 HEADERS += \
     QInventorContext.h \
-    QQuickInventor.h
+    QQuickInventorView.h
 SOURCES += main.cpp \
     QInventorContext.cpp \
-    QQuickInventor.cpp
+    QQuickInventorView.cpp
 
 RESOURCES += QtInventor.qrc
 
