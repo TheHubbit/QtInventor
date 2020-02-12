@@ -23,7 +23,6 @@ Q_OBJECT
 public:
     QInventorContext(QQuickView *window);
     static void init();
-    static QOpenGLContext *sharedOpenGLContext();
 
 protected slots:
     void onSceneGraphInitialized();
@@ -31,9 +30,8 @@ protected slots:
 protected:
     void timerEvent(QTimerEvent *event) override;
 
-    static QOpenGLContext *theSharedOpenGLContext;
-    static bool isShared;
-    QQuickView *quickView;
+    QOpenGLContext *m_sharedOpenGLContext;
+    QQuickView *m_quickView;
 };
 
 

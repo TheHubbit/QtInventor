@@ -17,10 +17,6 @@
 #include <Inventor/SoInteraction.h>
 
 
-QOpenGLContext *QInventorContext::theSharedOpenGLContext = 0;
-bool QInventorContext::isShared = false;
-
-
 void QInventorContext::init()
 {
     // Register QML type for viewing Inventor scenes.
@@ -31,29 +27,24 @@ void QInventorContext::init()
     SoInteraction::init();
 }
 
-QOpenGLContext *QInventorContext::sharedOpenGLContext()
-{
-    return isShared ? theSharedOpenGLContext : 0;
-}
-
 QInventorContext::QInventorContext(QQuickView *window)
 {
     init();
-    quickView = window;
+    m_quickView = window;
 
-    // Create a new OpenGL context to render Coin scenes in Gui thread.
-    quickView->setPersistentOpenGLContext(true);
-    theSharedOpenGLContext = new QOpenGLContext(this);
-    theSharedOpenGLContext->setFormat(quickView->requestedFormat());
-    theSharedOpenGLContext->create();
+    // Create a new OpenGL context to render Inventor scenes in Gui thread.
+    m_quickView->setPersistentOpenGLContext(true);
+    m_sharedOpenGLContext = new QOpenGLContext(this);
+    m_sharedOpenGLContext->setFormat(m_quickView->requestedFormat());
+    m_sharedOpenGLContext->create();
 
-    // Add shared OpenGL context property to window. This is used by QQuickCoinView to render Inventor scenes.
-    QVariant v = qVariantFromValue(theSharedOpenGLContext);
+    // Add shared OpenGL context property to window. This is used by QQuickInventor to render Inventor scenes.
+    QVariant v = qVariantFromValue(m_sharedOpenGLContext);
     m_quickView->setProperty(QQuickInventorView::OpenGLContextProperty, v);
 
     // Share OpenGL resources once Quick SG is initialized.
     // Use direct connection to ensure that we are called from QSGRenderThread (required for making context current).
-    connect(quickView, SIGNAL(sceneGraphInitialized()), this, SLOT(onSceneGraphInitialized()), Qt::DirectConnection);
+    connect(m_quickView, SIGNAL(sceneGraphInitialized()), this, SLOT(onSceneGraphInitialized()), Qt::DirectConnection);
 
     // Start timer for queue processing.
     startTimer(10);
@@ -62,16 +53,14 @@ QInventorContext::QInventorContext(QQuickView *window)
 void QInventorContext::onSceneGraphInitialized()
 {
     // source: https://forum.qt.io/topic/24701/solved-creating-a-qquickview-with-a-shared-opengl-context
-    quickView->setPersistentOpenGLContext(true);
-    quickView->openglContext()->blockSignals(true);
-    quickView->openglContext()->doneCurrent();
-    quickView->openglContext()->setShareContext(theSharedOpenGLContext);
-    quickView->openglContext()->setFormat(quickView->requestedFormat());
-    quickView->openglContext()->create();
-    quickView->openglContext()->makeCurrent(quickView);
-    quickView->openglContext()->blockSignals(false);
-
-    isShared = true;
+    m_quickView->setPersistentOpenGLContext(true);
+    m_quickView->openglContext()->blockSignals(true);
+    m_quickView->openglContext()->doneCurrent();
+    m_quickView->openglContext()->setShareContext(m_sharedOpenGLContext);
+    m_quickView->openglContext()->setFormat(m_quickView->requestedFormat());
+    m_quickView->openglContext()->create();
+    m_quickView->openglContext()->makeCurrent(m_quickView);
+    m_quickView->openglContext()->blockSignals(false);
 }
 
 void QInventorContext::timerEvent(QTimerEvent *event)
