@@ -12,6 +12,7 @@
 
 #include <QTimer>
 #include "QInventorContext.h"
+#include "QQuickInventorScene.h"
 #include "QQuickInventorView.h"
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInteraction.h>
@@ -19,7 +20,8 @@
 
 void QInventorContext::init()
 {
-    // Register QML type for viewing Inventor scenes.
+    // Register QML types for creating and viewing Inventor scenes.
+    qmlRegisterType<QQuickInventorScene>("QtInventor", 1, 0, "InventorScene");
     qmlRegisterType<QQuickInventorView>("QtInventor", 1, 0, "InventorRenderer");
 
     // Initialize scene object database.

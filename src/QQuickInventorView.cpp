@@ -26,7 +26,8 @@
 QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferObject(parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
-    m_frameBufferObject = 0;
+    m_frameBufferObject = nullptr;
+    m_scene = nullptr;
 
     m_sceneManager.setRenderCallback(renderCBFunc, this);
 
@@ -156,47 +157,23 @@ void QQuickInventorView::mouseMoveEvent(QMouseEvent *event)
     m_sceneManager.processEvent(&moveEvent);
 }
 
-void QQuickInventorView::setScene(const QString &str)
+void QQuickInventorView::setScene(QQuickInventorScene *scene)
 {
-    m_sceneString = str;
+    m_scene = scene;
 
-    QByteArray sceneBuffer;
-    if (str.left(1) == "#")
-    {
-        // Buffer
-        sceneBuffer = str.toUtf8();
-    }
-    else
-    {
-        // File
-        QFile file(str);//":/ExampleScene.iv");
-        if (file.open(QFile::ReadOnly))
-        {
-            QByteArray sceneBuffer = file.readAll();
-        }
-    }
+    m_sceneManager.setSceneGraph(m_scene->scene());
+    m_sceneManager.scheduleRedraw();
 
-    SoInput in;
-    in.setBuffer(sceneBuffer.data(), size_t(sceneBuffer.size()));
-    if (in.isValidBuffer())
-    {
-        SoSeparator *root = SoDB::readAll(&in);
-        m_sceneManager.setSceneGraph(root);
-        m_sceneManager.scheduleRedraw();
-
-        emit sceneChanged();
-    }
 }
 
-QString QQuickInventorView::scene() const
+QQuickInventorScene* QQuickInventorView::scene() const
 {
-    return m_sceneString;
+    return m_scene;
 }
-
 
 QQuickInventorView::InventorRenderer::InventorRenderer()
 {
-    m_syncFramebufferObject = 0;
+    m_syncFramebufferObject = nullptr;
 }
 
 void QQuickInventorView::InventorRenderer::render()

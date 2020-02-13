@@ -18,12 +18,13 @@
 #include <QQuickView>
 #include <QWriteLocker>
 #include <Inventor/SoSceneManager.h>
+#include "QQuickInventorScene.h"
 
 
 class QQuickInventorView : public QQuickFramebufferObject, protected QOpenGLFunctions
 {
     Q_OBJECT
-    Q_PROPERTY(QString scene READ scene WRITE setScene USER true)
+    Q_PROPERTY(QQuickInventorScene* scene READ scene WRITE setScene USER true)
 
 public:
     static constexpr const char* OpenGLContextProperty = "InventorOpenGLContext";
@@ -33,8 +34,8 @@ public:
     QOpenGLFramebufferObject *fbo() const;
     QReadWriteLock *fboLock();
 
-    void setScene(const QString &str);
-    QString scene() const;
+    void setScene(QQuickInventorScene *s);
+    QQuickInventorScene* scene() const;
 
 signals:
     void sceneChanged();
@@ -54,7 +55,7 @@ protected:
     QOpenGLFramebufferObject *m_frameBufferObject;
     SoSceneManager m_sceneManager;
     QReadWriteLock m_frameBufferObjectLock;
-    QString m_sceneString;
+    QQuickInventorScene *m_scene;
 
     class InventorRenderer : public QQuickFramebufferObject::Renderer
     {

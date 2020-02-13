@@ -12,26 +12,73 @@
 
 import QtQuick 2.0
 import QtGraphicalEffects 1.0
+import QtQuick.Layouts 1.3
 import QtInventor 1.0
 
 
 Item {
-    width: 600
-    height: 600
+    id: root
+    width: 800
+    height: 400
+
+    InventorScene {
+        id: cubeScene
+        text: "
+#Inventor V2.1 ascii
+
+Separator {
+  DirectionalLight {
+  }
+  OrthographicCamera {
+    position 0 0 3.1500392
+    nearDistance 0
+    farDistance 6.3000784
+    focalDistance 3.1500392
+    height 6.3000784
+  }
+  TrackballManip {
+  }
+  ShapeKit {
+    appearance
+    AppearanceKit {
+      material
+      Material {
+        diffuseColor 1.0 0.2 0.2
+      }
+    }
+  }
+}
+"
+    }
 
     LinearGradient {
         anchors.fill: parent
         start: Qt.point(0, 0)
-        end: Qt.point(0, 600)
+        end: Qt.point(0, root.height)
         gradient: Gradient {
             GradientStop { position: 0.0; color: "grey" }
             GradientStop { position: 1.0; color: "black" }
         }
     }
 
-    InventorRenderer {
-        id: renderer
-        anchors.fill: parent
+    GridLayout {
+        id: grid
+        columns: 2
+        width: parent.width
+        height: parent.height
+
+        InventorRenderer {
+            id: renderer1
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            scene: cubeScene
+        }
+        InventorRenderer {
+            id: renderer2
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            scene: cubeScene
+        }
     }
 
     Rectangle {
@@ -46,9 +93,9 @@ Item {
 
     Text {
         id: label
-        anchors.bottom: renderer.bottom
-        anchors.left: renderer.left
-        anchors.right: renderer.right
+        anchors.bottom: grid.bottom
+        anchors.left: grid.left
+        anchors.right: grid.right
         anchors.margins: 20
         wrapMode: Text.WordWrap
         text: "The cube and rotate manipulator are part of an Open Inventor scene graph that is rendered in the main application thread. The resulting image is then rendered on the Qt Quick scene graph rendering thread using the QQuickInventor class, which is derived from QQuickFramebufferObject."
