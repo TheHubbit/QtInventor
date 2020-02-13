@@ -34,7 +34,7 @@ Separator {
     nearDistance 0
     farDistance 6.3000784
     focalDistance 3.1500392
-    height 6.3000784
+    height 4
   }
   TrackballManip {
   }
@@ -89,6 +89,13 @@ Separator {
         border.color: "black"
         opacity: 0.8
         anchors.fill: label
+
+        MouseArea {
+            anchors.fill: parent
+            onClicked: {
+                renderer1.viewAll()
+            }
+        }
     }
 
     Text {

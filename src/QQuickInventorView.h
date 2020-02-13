@@ -37,6 +37,8 @@ public:
     void setScene(QQuickInventorScene *s);
     QQuickInventorScene* scene() const;
 
+    Q_INVOKABLE void viewAll();
+
 signals:
     void sceneChanged();
 

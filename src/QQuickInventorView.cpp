@@ -15,12 +15,14 @@
 #include <QOpenGLFunctions>
 #include <QtGui/QOpenGLFramebufferObject>
 #include <QtQuick/QQuickWindow>
+#include <QReadLocker>
 #include <Inventor/SoDB.h>
 #include <Inventor/SoInput.h>
 #include <Inventor/nodes/SoSeparator.h>
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoMouseButtonEvent.h>
-#include <QReadLocker>
+#include <Inventor/actions/SoSearchAction.h>
+#include <Inventor/nodes/SoCamera.h>
 
 
 QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferObject(parent)
@@ -170,6 +172,19 @@ QQuickInventorScene* QQuickInventorView::scene() const
 {
     return m_scene;
 }
+
+void QQuickInventorView::viewAll()
+{
+    SoSearchAction searchAction;
+    searchAction.setType(SoCamera::getClassTypeId());
+    searchAction.apply(m_sceneManager.getSceneGraph());
+    if (searchAction.getPath())
+    {
+        SoCamera* camera = (SoCamera*) searchAction.getPath()->getTail();
+        camera->viewAll(m_sceneManager.getSceneGraph(), m_sceneManager.getViewportRegion());
+    }
+}
+
 
 QQuickInventorView::InventorRenderer::InventorRenderer()
 {
