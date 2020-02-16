@@ -33,17 +33,6 @@ QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferOb
 
     m_sceneManager.setRenderCallback(renderCBFunc, this);
 
-    QFile file(":/ExampleScene.iv");
-    if (file.open(QFile::ReadOnly))
-    {
-        QByteArray sceneBuffer = file.readAll();
-
-        SoInput in;
-        in.setBuffer(sceneBuffer.data(), size_t(sceneBuffer.size()));
-        m_sceneManager.setSceneGraph(SoDB::readAll(&in));
-        m_sceneManager.scheduleRedraw();
-    }
-
     connect(this, SIGNAL(widthChanged()), this, SLOT(onResize()));
     connect(this, SIGNAL(heightChanged()), this, SLOT(onResize()));
 }
