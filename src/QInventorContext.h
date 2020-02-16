@@ -15,23 +15,27 @@
 
 #include <QtGui/QOpenGLContext>
 #include <QQuickView>
+#include <QQmlApplicationEngine>
 
 
 class QInventorContext : public QObject
 {
 Q_OBJECT
 public:
-    QInventorContext(QQuickView *window);
+    QInventorContext(QQuickWindow *window);
+    QInventorContext(QQmlApplicationEngine *engine);
+
     static void init();
 
 protected slots:
-    void onSceneGraphInitialized();
+    void openglContextCreated(QOpenGLContext *context);
+    void objectCreated(QObject *object, const QUrl &url);
 
 protected:
+    void attachToWindow(QQuickWindow *window);
     void timerEvent(QTimerEvent *event) override;
 
     QOpenGLContext *m_sharedOpenGLContext;
-    QQuickView *m_quickView;
 };
 
 
