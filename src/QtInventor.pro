@@ -13,8 +13,16 @@ SOURCES += main.cpp \
 
 RESOURCES += QtInventor.qrc
 
-INCLUDEPATH += $$(COINDIR)/include
+INCLUDEPATH += $$(COINDIR)/include /usr/local/include
 LIBS += -L$$(COINDIR)/lib
+
+unix:!macx {
+    LIBS += /usr/local/lib/libCoin.so
+}
+
+macx: {
+    LIBS += /usr/local/lib/libCoin.dylib
+}
 
 OTHER_FILES += \
     main.qml
