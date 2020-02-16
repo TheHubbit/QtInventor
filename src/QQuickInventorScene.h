@@ -21,9 +21,9 @@
 class QQuickInventorScene : public QQuickItem
 {
     Q_OBJECT
-    Q_PROPERTY(QString text READ text WRITE setText USER true)
-    Q_PROPERTY(QString file READ file WRITE setFile USER true)
-    Q_PROPERTY(SoSeparator* scene READ scene WRITE setScene USER true)
+    Q_PROPERTY(QString text READ text WRITE setText)
+    Q_PROPERTY(QString file READ file WRITE setFile)
+    Q_PROPERTY(SoSeparator* scene READ scene WRITE setScene)
 
 public:
     explicit QQuickInventorScene(QQuickItem *parent = nullptr);
