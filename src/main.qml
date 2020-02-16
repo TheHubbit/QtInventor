@@ -14,41 +14,40 @@ import QtQuick 2.0
 import QtGraphicalEffects 1.0
 import QtQuick.Layouts 1.3
 import QtInventor 1.0
+import QtQuick.Window 2.12
 
-
-Item {
+// Item {
+Window {
     id: root
     width: 800
     height: 400
+    visible: true
 
     InventorScene {
         id: cubeScene
         text: "
-#Inventor V2.1 ascii
+            #Inventor V2.1 ascii
 
-Separator {
-  DirectionalLight {
-  }
-  OrthographicCamera {
-    position 0 0 3.1500392
-    nearDistance 0
-    farDistance 6.3000784
-    focalDistance 3.1500392
-    height 4
-  }
-  TrackballManip {
-  }
-  ShapeKit {
-    appearance
-    AppearanceKit {
-      material
-      Material {
-        diffuseColor 1.0 0.2 0.2
-      }
-    }
-  }
-}
-"
+            Separator {
+              DirectionalLight { }
+              OrthographicCamera {
+                position 0 0 3.1500392
+                nearDistance 0
+                farDistance 6.3000784
+                focalDistance 3.1500392
+                height 4
+              }
+              TrackballManip { }
+              ShapeKit {
+                appearance
+                AppearanceKit {
+                  material
+                  Material {
+                    diffuseColor 1.0 0.2 0.2
+                  }
+                }
+              }
+            }"
     }
 
     LinearGradient {
