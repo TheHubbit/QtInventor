@@ -11,11 +11,9 @@
 
 #include <QGuiApplication>
 #include <QtQuick/QQuickView>
-
 #include <QQmlApplicationEngine>
 #include <QQuickWindow>
-
-#include "QInventorContext.h"
+#include "QQuickInventorScene.h"
 #include "QQuickInventorView.h"
 
 
@@ -23,27 +21,19 @@ int main(int argc, char **argv)
 {
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QGuiApplication app(argc, argv);
-
-#if 0
-    // Using QQuickView
-    QQuickView view;
-    QInventorContext inventorContext(&view);
-    view.setResizeMode(QQuickView::SizeRootObjectToView);
-    view.setSource(QUrl("qrc:///main.qml"));
-    view.show();
-#else
-    // Using QQmlApplicationEngine
     QQmlApplicationEngine engine;
-    QInventorContext inventorContext(&engine);
+
+    // Register QML types for creating and viewing Inventor scenes.
+    qmlRegisterType<QQuickInventorScene>("QtInventor", 1, 0, "InventorScene");
+    qmlRegisterType<QQuickInventorView>("QtInventor", 1, 0, "InventorRenderer");
 
     const QUrl url(QStringLiteral("qrc:/main.qml"));
-    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
-                     &app, [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl)
-            QCoreApplication::exit(-1);
-    }, Qt::QueuedConnection);
+    QObject::connect(&engine, &QQmlApplicationEngine::objectCreated, &app, [url](QObject *obj, const QUrl &objUrl)
+        {
+            if (!obj && url == objUrl)
+                QCoreApplication::exit(-1);
+        }, Qt::QueuedConnection);
     engine.load(url);
-#endif
 
     return app.exec();
 }

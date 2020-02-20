@@ -11,14 +11,48 @@
 
 
 #include "QQuickInventorScene.h"
+#include <Inventor/SoDB.h>
+#include <Inventor/SoInteraction.h>
+
 
 QQuickInventorScene::QQuickInventorScene(QQuickItem *parent) : QQuickItem(parent)
 {
     m_rootNode = nullptr;
+    initInventor();
+}
+
+QReadWriteLock* QQuickInventorScene::mutex()
+{
+    static QReadWriteLock inventorMutex;
+
+    return &inventorMutex;
+}
+
+void QQuickInventorScene::initInventor()
+{
+    if (!SoDB::isInitialized())
+    {
+        // Initialize scene object database.
+        SoDB::init();
+        SoInteraction::init();
+    }
+
+    // For timer and delay queue processing
+    startTimer(10);
+}
+
+void QQuickInventorScene::timerEvent(QTimerEvent *event)
+{
+    QWriteLocker locker(mutex());
+
+    SoDB::getSensorManager()->processTimerQueue();
+    SoDB::getSensorManager()->processDelayQueue(TRUE);
 }
 
 void QQuickInventorScene::releaseResources()
 {
+    QWriteLocker locker(mutex());
+
     if (m_rootNode)
     {
         m_rootNode->unref();
@@ -68,6 +102,8 @@ void QQuickInventorScene::readAll(const QByteArray &buffer)
 
 void QQuickInventorScene::setScene(SoSeparator *scene)
 {
+    QWriteLocker locker(mutex());
+
     if (m_rootNode != scene)
     {
         if (m_rootNode)

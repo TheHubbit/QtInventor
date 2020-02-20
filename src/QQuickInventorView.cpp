@@ -11,7 +11,6 @@
 
 
 #include "QQuickInventorView.h"
-#include "QInventorContext.h"
 #include <QOpenGLFunctions>
 #include <QtGui/QOpenGLFramebufferObject>
 #include <QtQuick/QQuickWindow>
@@ -22,19 +21,22 @@
 #include <Inventor/events/SoLocation2Event.h>
 #include <Inventor/events/SoMouseButtonEvent.h>
 #include <Inventor/actions/SoSearchAction.h>
+#include <Inventor/actions/SoGLRenderAction.h>
 #include <Inventor/nodes/SoCamera.h>
 
 
 QQuickInventorView::QQuickInventorView(QQuickItem *parent) : QQuickFramebufferObject(parent)
 {
     setAcceptedMouseButtons(Qt::AllButtons);
-    m_frameBufferObject = nullptr;
     m_scene = nullptr;
 
     m_sceneManager.setRenderCallback(renderCBFunc, this);
 
     connect(this, SIGNAL(widthChanged()), this, SLOT(onResize()));
     connect(this, SIGNAL(heightChanged()), this, SLOT(onResize()));
+
+    // Initialize size fo scene manager.
+    onResize();
 }
 
 void QQuickInventorView::onResize()
@@ -44,82 +46,24 @@ void QQuickInventorView::onResize()
     {
         m_sceneManager.setWindowSize(sizeVec2s);
         m_sceneManager.setSize(sizeVec2s);
-        renderIvScene();
     }
 }
 
 QQuickFramebufferObject::Renderer *QQuickInventorView::createRenderer() const
 {
-    return new InventorRenderer();
-}
-
-QOpenGLFramebufferObject *QQuickInventorView::fbo() const
-{
-    return m_frameBufferObject;
-}
-
-QReadWriteLock *QQuickInventorView::fboLock()
-{
-    return &m_frameBufferObjectLock;
+    return new InventorRenderer((QQuickInventorView*) this);
 }
 
 void QQuickInventorView::renderCBFunc(void *userdata, SoSceneManager *)
 {
     QQuickInventorView* thisPtr = static_cast<QQuickInventorView*>(userdata);
-    thisPtr->renderIvScene();
-}
-
-void QQuickInventorView::createAndBindFramebufferObject(const QSize &size)
-{
-    if (m_frameBufferObject)
-    {
-        if (m_frameBufferObject->size() == size)
-        {
-            // Keep using already created framebuffer. Just bind it.
-            m_frameBufferObject->bind();
-            return;
-        }
-
-        delete m_frameBufferObject;
-    }
-
-    QOpenGLFramebufferObjectFormat format;
-    format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-    format.setSamples(4);
-
-    m_frameBufferObject = new QOpenGLFramebufferObject(size, format);
-    m_frameBufferObject->bind();
-
-    // initializeOpenGLFunctions() checks if already initialized.
-    initializeOpenGLFunctions();
-    glEnable(GL_LIGHTING);
-    glEnable(GL_DEPTH_TEST);
-}
-
-void QQuickInventorView::renderIvScene()
-{
-    if (window())
-    {
-        QVariant v = window()->property(OpenGLContextProperty);
-        if (QOpenGLContext *context = v.value<QOpenGLContext*>())
-        {
-            if (context->makeCurrent(window()))
-            {
-                QWriteLocker locker(&m_frameBufferObjectLock);
-                createAndBindFramebufferObject(QSize(m_sceneManager.getSize()[0], m_sceneManager.getSize()[1]));
-                m_sceneManager.render();
-                m_frameBufferObject->release();
-                context->doneCurrent();
-            }
-
-            // Trigger display update
-            update();
-        }
-    }
+    thisPtr->update();
 }
 
 void QQuickInventorView::mousePressEvent(QMouseEvent *event)
 {
+    QWriteLocker locker(QQuickInventorScene::mutex());
+
     SoMouseButtonEvent::Button button = event->button() & Qt::LeftButton ? SoMouseButtonEvent::BUTTON1 : SoMouseButtonEvent::BUTTON3;
     SoMouseButtonEvent buttonEvent;
     buttonEvent.setTime(SbTime::getTimeOfDay());
@@ -131,6 +75,8 @@ void QQuickInventorView::mousePressEvent(QMouseEvent *event)
 
 void QQuickInventorView::mouseReleaseEvent(QMouseEvent *event)
 {
+    QWriteLocker locker(QQuickInventorScene::mutex());
+
     SoMouseButtonEvent::Button button = event->button() & Qt::LeftButton ? SoMouseButtonEvent::BUTTON1 : SoMouseButtonEvent::BUTTON3;
     SoMouseButtonEvent buttonEvent;
     buttonEvent.setTime(SbTime::getTimeOfDay());
@@ -142,6 +88,8 @@ void QQuickInventorView::mouseReleaseEvent(QMouseEvent *event)
 
 void QQuickInventorView::mouseMoveEvent(QMouseEvent *event)
 {
+    QWriteLocker locker(QQuickInventorScene::mutex());
+
     SoLocation2Event moveEvent;
     moveEvent.setTime(SbTime::getTimeOfDay());
     moveEvent.setPosition(SbVec2s(short(event->x()), short(event->y())));
@@ -150,11 +98,12 @@ void QQuickInventorView::mouseMoveEvent(QMouseEvent *event)
 
 void QQuickInventorView::setScene(QQuickInventorScene *scene)
 {
+    QWriteLocker locker(QQuickInventorScene::mutex());
+
     m_scene = scene;
 
     m_sceneManager.setSceneGraph(m_scene->scene());
     m_sceneManager.scheduleRedraw();
-
 }
 
 QQuickInventorScene* QQuickInventorView::scene() const
@@ -164,6 +113,8 @@ QQuickInventorScene* QQuickInventorView::scene() const
 
 void QQuickInventorView::viewAll()
 {
+    QWriteLocker locker(QQuickInventorScene::mutex());
+
     SoSearchAction searchAction;
     searchAction.setType(SoCamera::getClassTypeId());
     searchAction.apply(m_sceneManager.getSceneGraph());
@@ -175,52 +126,45 @@ void QQuickInventorView::viewAll()
 }
 
 
-QQuickInventorView::InventorRenderer::InventorRenderer()
+QQuickInventorView::InventorRenderer::InventorRenderer(QQuickInventorView *item)
 {
-    m_syncFramebufferObject = nullptr;
+    m_quickItem = item;
 }
 
 void QQuickInventorView::InventorRenderer::render()
 {
-    // Framebuffer content already updated in synchronize or createFramebufferObject.
-}
+    // Make sure that Inventor scene isn't changes while being rendered.
+    QWriteLocker locker(QQuickInventorScene::mutex());
 
-void QQuickInventorView::InventorRenderer::synchronize(QQuickFramebufferObject *quickObject)
-{
-    QQuickInventorView *view = dynamic_cast<QQuickInventorView *>(quickObject);
-    if (view)
-    {
-        // Update content during synchronize call when main thread is blocked.
-        copyFramebufferContent(view->fbo(), framebufferObject());
+    // This call keeps track if already initialized.
+    initializeOpenGLFunctions();
 
-        // Remember source so createFramebufferObject() can copy again in case of resize.
-        m_syncFramebufferObject = view->fbo();
-        m_syncFramebufferObjectLock = view->fboLock();
-    }
+    // Need to unbind any current shader program. Save and restore
+    // just to make sure not interferring with Qt's rendering.
+    GLint currentShaderPRogram = 0;
+    glGetIntegerv(GL_CURRENT_PROGRAM, &currentShaderPRogram);
+
+    // Setup OpenGL state to what Inventor expects.
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+    glUseProgram(0);
+
+    SoSceneManager &sm = m_quickItem->m_sceneManager;
+    // Don't expect current OpenGL state matches Inventor state after last traversal.
+    sm.getGLRenderAction()->invalidateState();
+    sm.render();
+
+    glUseProgram(currentShaderPRogram);
+
+    // see: https://www.qt.io/blog/2015/05/11/integrating-custom-opengl-rendering-with-qt-quick-via-qquickframebufferobject
+    m_quickItem->window()->resetOpenGLState();
 }
 
 QOpenGLFramebufferObject *QQuickInventorView::InventorRenderer::createFramebufferObject(const QSize &size)
 {
     QOpenGLFramebufferObjectFormat format;
     format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
+    format.setSamples(4);
 
-    QOpenGLFramebufferObject *fbo = new QOpenGLFramebufferObject(size, format);
-
-    // Copy last content into newly created frmaebuffer (typically after resizing).
-    if (m_syncFramebufferObjectLock && m_syncFramebufferObject)
-    {
-        QReadLocker locker(m_syncFramebufferObjectLock);
-        copyFramebufferContent(m_syncFramebufferObject, fbo);
-    }
-
-    return fbo;
-}
-
-void QQuickInventorView::InventorRenderer::copyFramebufferContent(QOpenGLFramebufferObject *source, QOpenGLFramebufferObject *target)
-{
-    if (source && target)
-    {
-        QRect rect(0, 0, source->width(), source->height());
-        QOpenGLFramebufferObject::blitFramebuffer(target, rect, source, rect, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-    }
+    return new QOpenGLFramebufferObject(size, format);
 }

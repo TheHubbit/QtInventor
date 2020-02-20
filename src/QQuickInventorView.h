@@ -21,18 +21,14 @@
 #include "QQuickInventorScene.h"
 
 
-class QQuickInventorView : public QQuickFramebufferObject, protected QOpenGLFunctions
+class QQuickInventorView : public QQuickFramebufferObject
 {
     Q_OBJECT
     Q_PROPERTY(QQuickInventorScene* scene READ scene WRITE setScene USER true)
 
 public:
-    static constexpr const char* OpenGLContextProperty = "InventorOpenGLContext";
-
     QQuickInventorView(QQuickItem *parent = 0);
     Renderer *createRenderer() const override;
-    QOpenGLFramebufferObject *fbo() const;
-    QReadWriteLock *fboLock();
 
     void setScene(QQuickInventorScene *s);
     QQuickInventorScene* scene() const;
@@ -51,28 +47,20 @@ protected:
     void mouseReleaseEvent(QMouseEvent *event) override;
 
     static void renderCBFunc(void *userdata, SoSceneManager *mgr);
-    virtual void renderIvScene();
-    virtual void createAndBindFramebufferObject(const QSize &size);
 
-    QOpenGLFramebufferObject *m_frameBufferObject;
     SoSceneManager m_sceneManager;
-    QReadWriteLock m_frameBufferObjectLock;
     QQuickInventorScene *m_scene;
 
-    class InventorRenderer : public QQuickFramebufferObject::Renderer
+    class InventorRenderer : public QQuickFramebufferObject::Renderer, protected QOpenGLFunctions
     {
     public:
-        InventorRenderer();
+        InventorRenderer(QQuickInventorView *item);
 
-        // No additional work for render(). Framebuffer is copied from scene graph in synchronize().
         void render() override;
-        void synchronize(QQuickFramebufferObject *quickObject) override;
         QOpenGLFramebufferObject *createFramebufferObject(const QSize &size) override;
 
     protected:
-        virtual void copyFramebufferContent(QOpenGLFramebufferObject *source, QOpenGLFramebufferObject *target);
-        QOpenGLFramebufferObject *m_syncFramebufferObject;
-        QReadWriteLock *m_syncFramebufferObjectLock;
+        QQuickInventorView *m_quickItem;
     };
 };
 

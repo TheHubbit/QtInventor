@@ -16,12 +16,12 @@ import QtQuick.Layouts 1.3
 import QtInventor 1.0
 import QtQuick.Window 2.12
 
-// Item {
 Window {
     id: root
     width: 800
     height: 400
     visible: true
+    title: "Open Inventor with QtQuick"
 
     InventorScene {
         id: cubeScene
@@ -104,7 +104,7 @@ Window {
         anchors.right: grid.right
         anchors.margins: 20
         wrapMode: Text.WordWrap
-        text: "The cube and rotate manipulator are part of an Open Inventor scene graph that is rendered in the main application thread. The resulting image is then rendered on the Qt Quick scene graph rendering thread using the QQuickInventor class, which is derived from QQuickFramebufferObject."
+        text: "The cube and rotate manipulator are part of an Open Inventor scene graph that is embedded into QtQuick using a class that is derived from QQuickFramebufferObject."
     }
 }
 

@@ -15,6 +15,7 @@
 
 #include <QObject>
 #include <QQuickItem>
+#include <QWriteLocker>
 #include <Inventor/nodes/SoSeparator.h>
 
 
@@ -27,6 +28,8 @@ class QQuickInventorScene : public QQuickItem
 
 public:
     explicit QQuickInventorScene(QQuickItem *parent = nullptr);
+
+    static QReadWriteLock* mutex();
 
     void setFile(const QString &str);
     QString file() const;
@@ -43,7 +46,10 @@ signals:
     void sceneChanged();
 
 protected:
-    virtual void releaseResources() override;
+    virtual void initInventor();
+
+    void timerEvent(QTimerEvent *event) override;
+    void releaseResources() override;
 
     SoSeparator *m_rootNode;
     QString m_sceneString;
